@@ -133,3 +133,69 @@ class FST:
                 ret.add((s, w))
             return ret
         return states
+
+# TODO: escaped colons
+# TODO: multichar_symbols
+def tokenize_lexc(line):
+    ret = []
+    cur = ''
+    esc = False
+    for c in line:
+        if esc:
+            cur += c
+            esc = False
+        elif c == '%':
+            esc = True
+        elif c.isspace():
+            if cur:
+                ret.append(cur)
+            cur = ''
+        elif c == '!':
+            break
+        elif c in ':;':
+            if cur:
+                ret.append(cur)
+            ret.append(c)
+            cur = ''
+        # TODO: regex in <>
+        else:
+            cur += c
+    if cur:
+        ret.append(cur)
+    return ret
+def compile_lexc(text, errors=True):
+    ret = FST()
+    lexicons = {'Root': 0}
+    start = 0
+    for lineno, line in enumerate(text.splitlines(), 1):
+        toks = tokenize_lexc(line)
+        if not toks:
+            continue
+        if len(toks) == 2 and toks[0].lower() == 'lexicon':
+            name = toks[1]
+            if name not in lexicons:
+                lexicons[name] = FST.add_state()
+            start = lexicons[name]
+        elif len(toks) > 1 and toks[-1] == ';':
+            tgt = toks[-2]
+            if tgt not in lexicons:
+                lexicons[tgt] = ret.add_state()
+            end = lexicons[tgt]
+            content = toks[:-2]
+            if len(content) == 0 or content == [':']:
+                ret.add_arc(start, '', '', end=end)
+            elif len(content) == 1:
+                ret.add_string(start, content[0], content[0], end=end)
+            elif len(content) == 2 and content[0] == ':':
+                ret.add_string(start, '', content[1], end=end)
+            elif len(content) == 2 and content[1] == ':':
+                ret.add_string(start, content[0], '', end=end)
+            elif len(content) == 3 and content[1] == ':':
+                ret.add_string(start, content[0], content[2], end=end)
+            elif errors:
+                raise ValueError('Unable to parse line %d: "%s"' % (lineno, line))
+        elif errors:
+            raise ValueError('Unable to parse line %d: "%s"' % (lineno, line))
+    if '#' in lexicons:
+        ret.add_final(lexicons['#'])
+    return ret

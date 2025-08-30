@@ -36,3 +36,18 @@ h = f.compose(g)
 
 print('h down abc', h.apply_down('abc'))
 print('h down xy', h.apply_down('xy'))
+
+l = main.compile_lexc('''
+LEXICON Root
+A ;
+b: A ;
+:c A ;
+d:e A ;
+LEXICON A
+f:g # ;
+''')
+print(l.transitions)
+
+print('l down f', l.apply_down('f'))
+print('l down bf', l.apply_down('bf'))
+print('l down df', l.apply_down('df'))
