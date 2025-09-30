@@ -1,3 +1,6 @@
+# Adapdted from https://github.com/mr-martian/ppfst
+from random import sample
+
 class FST:
     def __init__(self):
         self.transitions = [{}]
@@ -107,8 +110,9 @@ class FST:
                 for u, d, t, w in path:
                     s += u
                     w += w
-                ret.add((s, w))
-            return ret
+                #ret.add((s, w))
+                ret.add(s)
+            return list(ret)
         return states
     def apply_down(self, inp, mode='string'):
         states = list(self._closure_down(0))
@@ -130,9 +134,70 @@ class FST:
                 for u, d, t, w in path:
                     s += d
                     w += w
-                ret.add((s, w))
+                ret.add(s)
             return ret
         return states
+
+    def upper_words(self, n=3, random=True):
+        """
+        Generate up to n possible strings along the upper tape
+        that lead from the start state (0) to a final state.
+
+        Args:
+            n (int): Number of examples to return (default=3).
+            random (bool): If True, sample at random from all possible
+                           strings. If False, take the first n strings
+                           found in traversal order.
+        """
+        results = []
+
+        def dfs(state, current):
+            if state in self.finals:
+                results.append("".join(current))
+            for (u, d), dests in self.transitions[state].items():
+                for next_state in dests:
+                    dfs(next_state, current + [u])
+
+        dfs(0, [])
+
+        if not results:
+            return []
+
+        if random:
+            return sample(results, min(n, len(results)))
+        else:
+            return results[:n]
+
+    def lower_words(self, n=3, random=True):
+        """
+        Generate up to n possible strings along the lower tape
+        that lead from the start state (0) to a final state.
+
+        Args:
+            n (int): Number of examples to return (default=3).
+            random (bool): If True, sample at random from all possible
+                           strings. If False, take the first n strings
+                           found in traversal order.
+        """
+        results = []
+
+        def dfs(state, current):
+            if state in self.finals:
+                results.append("".join(current))
+            for (u, d), dests in self.transitions[state].items():
+                for next_state in dests:
+                    dfs(next_state, current + [d])
+
+        dfs(0, [])
+
+        if not results:
+            return []
+
+        if random:
+            return sample(results, min(n, len(results)))
+        else:
+            return results[:n]
+
 
 # TODO: escaped colons
 # TODO: multichar_symbols
